@@ -1,5 +1,5 @@
 """
-Scrape Indeed for Company rankings, and number of reviews
+Scrape job board for company rankings, and number of reviews.
 """
 
 import logging
@@ -13,6 +13,7 @@ from selenium import webdriver
 from selenium.common.exceptions import (ElementClickInterceptedException,
                                         TimeoutException)
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as ExpeC
 from selenium.webdriver.support.wait import WebDriverWait
@@ -26,13 +27,7 @@ from drapi.code.drapi.drapi import (getTimestamp,
 SLEEP_BOUND_LOWER = 1
 SLEEP_BOUND_UPPER = 10
 WEBDRIVERWAIT_TIMEOUT_LIMIT = 20
-GCUP = "https://webcache.googleusercontent.com/search?q=cache:"  # Google Cache URL Prefix
-EMAIL_ADDRESS = os.environ["HFA_PICR_EMAIL"]
-PASSWORD = os.environ["HFA_PICR_PWD"]
-
-NUM_MAX_CLICKS = 100
-
-APPROACH_NEXT_PAGE_BUTTON = True
+TEST_MODE = True
 
 # Arguments: Meta-variables
 PROJECT_DIR_DEPTH = 2
@@ -80,6 +75,34 @@ pass
 makeDirPath(runOutputDir)
 makeDirPath(runLogsDir)
 
+# Functions
+
+
+def getNextPageLink(driver: WebDriver) -> WebElement:
+    """
+    """
+    SELECTOR_CSS_NEXT_PAGE_BUTTON = 'a[data-tn-element="next-page"]'
+    try:
+        nextPageButton = WebDriverWait(driver,
+                                       WEBDRIVERWAIT_TIMEOUT_LIMIT).until(ExpeC.element_to_be_clickable((By.CSS_SELECTOR,
+                                                                                                         SELECTOR_CSS_NEXT_PAGE_BUTTON)))
+    except TimeoutException as err:
+        message, *_ = err.args
+        if message == "":
+            nextPageButton = None
+        else:
+            raise err
+    return nextPageButton
+
+
+def saveLine(fpath: str, line: str) -> None:
+    """
+    """
+    with open(fpath, "a") as file:
+        file.write(line)
+        file.write("\n")
+
+
 # Logging block
 logpath = runLogsDir.joinpath(f"log {runTimestamp}.log")
 logFormat = logging.Formatter("""[%(asctime)s][%(levelname)s](%(funcName)s): %(message)s""")
@@ -108,8 +131,8 @@ if __name__ == "__main__":
     # Arguments
     `SLEEP_BOUND_LOWER`: "{SLEEP_BOUND_LOWER}"
     `SLEEP_BOUND_UPPER`: "{SLEEP_BOUND_UPPER}"
-    `EMAIL_ADDRESS`: "{EMAIL_ADDRESS}"
-    `NUM_MAX_CLICKS`: "{NUM_MAX_CLICKS}"
+    `WEBDRIVERWAIT_TIMEOUT_LIMIT`: "{WEBDRIVERWAIT_TIMEOUT_LIMIT}"
+    `TEST_MODE`: "{TEST_MODE}"
 
     # Arguments: General
     `PROJECT_DIR_DEPTH`: "{PROJECT_DIR_DEPTH}" ---------> "{projectDir}"
@@ -128,7 +151,7 @@ if __name__ == "__main__":
         # Go to companies page.
         logger.info("Going to companies page.")
         COMPANIES_HOMEPAGE = "https://www.indeed.com/companies"
-        driver.get(GCUP + COMPANIES_HOMEPAGE)
+        driver.get(COMPANIES_HOMEPAGE)
         logger.info("Going to companies page - done.")
         # Search first group of industry pages
         logger.info("Getting first six industry category links.")
@@ -139,14 +162,11 @@ if __name__ == "__main__":
             categoryName = el.get_attribute("text")
             categoryLink = el.get_attribute("href")
             industryCategoryLinks[categoryName] = categoryLink
-        logger.info("Getting first six industry category links. - done.")
+        logger.info("Getting first six industry category links - done.")
 
         # See all the other industry categories.
         logger.info("See all industries.")
-        if len(GCUP) == 0:
-            SELECTOR_CSS_ALL_INDUSTRY_CATEGORIES = '[data-tn-element="cmp-Industry-see-all-desktop-link"]'
-        elif len(GCUP) > 0:
-            SELECTOR_CSS_ALL_INDUSTRY_CATEGORIES = '[data-tn-element="cmp-Industry-see-all-mobile-link"]'
+        SELECTOR_CSS_ALL_INDUSTRY_CATEGORIES = '[data-tn-element="cmp-Industry-see-all-desktop-link"]'
         element = driver.find_element_by_css_selector(css_selector=SELECTOR_CSS_ALL_INDUSTRY_CATEGORIES)
         try:
             element.click()
@@ -173,27 +193,17 @@ if __name__ == "__main__":
             categoryDataFpath = runOutputDir.joinpath(f"{categoryName}.CSV")
             categoryDir = runOutputDir.joinpath(categoryName)
             makeDirPath(categoryDir)
-            driver.get(GCUP + categoryLink)
+            driver.get(categoryLink)
             categoryCompanies = {}
             # Get next page link
-            SELECTOR_CSS_NEXT_PAGE_BUTTON = 'a[data-tn-element="next-page"]'
-            if APPROACH_NEXT_PAGE_BUTTON:
-                try:
-                    nextPageButton = WebDriverWait(driver,
-                                                   WEBDRIVERWAIT_TIMEOUT_LIMIT).until(ExpeC.element_to_be_clickable((By.CSS_SELECTOR,
-                                                                                                                      SELECTOR_CSS_NEXT_PAGE_BUTTON)))
-                    condition = True
-                except TimeoutException as err:
-                    message, *_ = err.args
-                    condition = False
-            elif True:
-                elListNextPageButton = driver.find_elements_by_css_selector(css_selector=SELECTOR_CSS_NEXT_PAGE_BUTTON)
-                condition = len(elListNextPageButton) > 0
+            elNextPageButton = getNextPageLink(driver=driver)
+            # Write next page link to file
+            saveLine(fpath=categoryNextPageLinksFpath, line=nextPageLink)
             pageNum = 0
             companyNum = 0
-            while condition:
-                logger.info(f"""    Working on page {pageNum:,}.""")
+            while elNextPageButton:
                 pageNum += 1
+                logger.info(f"""    Working on page {pageNum:,}.""")
                 categoryCompaniesTemp = {}
                 elListCompanyBox = driver.find_elements_by_css_selector(css_selector='div[class="css-srfrud e1gufzzf0"]')
                 for el in elListCompanyBox:
@@ -211,47 +221,35 @@ if __name__ == "__main__":
                                                         "Number of Reviews": numReviews}
                     categoryCompanies.update(categoryCompaniesTemp)
                 # Save page source
-                logger.info("    Saving page source.")
+                logger.info("  ..  Saving page source.")
                 source = driver.page_source
                 pagepath = categoryDir.joinpath(f"Page {pageNum}.HTML")
                 with open(pagepath, "w") as file:
                     file.write(source)
-                logger.info("    Saving page source - done.")
+                logger.info("  ..  Saving page source - done.")
                 # Save page results to file
-                logger.info("""    Saving page results to file.""")
+                logger.info("""  ..  Saving page results to file.""")
                 df = pd.DataFrame.from_dict(categoryCompaniesTemp, orient="index")
                 df.to_csv(categoryDataFpath, mode="a")
-                logger.info("""    Saving page results to file - done.""")
+                logger.info("""  ..  Saving page results to file - done.""")
                 logger.info(f"""    Working on page {pageNum:,} - done.""")
                 # Get next page link
                 if pageNum == 1:
-                    if APPROACH_NEXT_PAGE_BUTTON:
-                        nextPageButton = nextPageButton
-                    elif True:
-                        nextPageButton = elListNextPageButton[0]
+                    elNextPageButton = elNextPageButton
                 else:
-                    if APPROACH_NEXT_PAGE_BUTTON:
-                        try:
-                            nextPageButton = WebDriverWait(driver,
-                                                        WEBDRIVERWAIT_TIMEOUT_LIMIT).until(ExpeC.element_to_be_clickable((By.CSS_SELECTOR,
-                                                                                                                            SELECTOR_CSS_NEXT_PAGE_BUTTON)))
-                            condition = True
-                        except TimeoutException as err:
-                            message, *_ = err.args
-                            condition = False
-                    elif True:
-                        elListNextPageButton = driver.find_elements_by_css_selector(css_selector=SELECTOR_CSS_NEXT_PAGE_BUTTON)
-                        condition = len(elListNextPageButton) > 0
-                nextPageLink = nextPageButton.get_attribute('href')
-                logger.info(f"""    Going to next page: "{nextPageLink}".""")
-                # Write next page link to file, one file per category.
-                with open(categoryNextPageLinksFpath, "a") as file:
-                    file.write(nextPageLink)
-                    file.write("\n")
-                sleep(randint(SLEEP_BOUND_LOWER, SLEEP_BOUND_UPPER))
-                driver.get(GCUP + nextPageLink)
-                if pageNum > 1:
-                    break
+                    elNextPageButton = getNextPageLink(driver=driver)
+                if elNextPageButton:
+                    nextPageLink = elNextPageButton.get_attribute('href')
+                    logger.info(f"""    Going to next page: "{nextPageLink}".""")
+                    # Write next page link to file
+                    saveLine(fpath=categoryNextPageLinksFpath, line=nextPageLink)
+                    sleep(randint(SLEEP_BOUND_LOWER, SLEEP_BOUND_UPPER))
+                    driver.get(nextPageLink)
+                    if TEST_MODE:
+                        if pageNum > 1:
+                            break
+                else:
+                    pass  # No more pages
             allCompanies.append((categoryName, categoryCompanies))
             sleep(randint(SLEEP_BOUND_LOWER, SLEEP_BOUND_UPPER))
             logger.info(f"""  Working on category "{categoryName}" - done.""")
