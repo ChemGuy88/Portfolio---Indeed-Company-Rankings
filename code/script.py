@@ -2,6 +2,7 @@
 Scrape job board for company rankings, and number of reviews.
 """
 
+import json
 import logging
 import os
 from pathlib import Path
@@ -198,7 +199,9 @@ if __name__ == "__main__":
             # Get next page link
             elNextPageButton = getNextPageLink(driver=driver)
             # Write next page link to file
-            saveLine(fpath=categoryNextPageLinksFpath, line=nextPageLink)
+            if elNextPageButton:
+                nextPageLink = elNextPageButton.get_attribute('href')
+                saveLine(fpath=categoryNextPageLinksFpath, line=nextPageLink)
             pageNum = 0
             companyNum = 0
             while elNextPageButton:
@@ -254,6 +257,12 @@ if __name__ == "__main__":
             sleep(randint(SLEEP_BOUND_LOWER, SLEEP_BOUND_UPPER))
             logger.info(f"""  Working on category "{categoryName}" - done.""")
         logger.info("Visiting category pages - done.")
+        logger.info("Saving all results.")
+        # JSON dump `allCompanies`
+        exportPath = runOutputDir.joinpath("All Companies.JSON")
+        with open(exportPath, "w") as file:
+            file.write(json.dumps(allCompanies))
+        logger.info("Saving all results - done.")
 
     # End script
     logger.info(f"""Finished running "{thisFilePath.absolute().relative_to(rootDirectory)}".""")
