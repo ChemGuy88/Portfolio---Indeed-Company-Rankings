@@ -1,15 +1,17 @@
 """
 Scrape job board for company rankings, and number of reviews.
+TODO Adapt methods to UC API
 """
 
 import json
 import logging
-import os
+import time
 from pathlib import Path
 from random import randint
 from time import sleep
 # Third-party packages
 import pandas as pd
+import undetected_chromedriver as uc
 from selenium import webdriver
 from selenium.common.exceptions import (ElementClickInterceptedException,
                                         TimeoutException)
@@ -144,11 +146,11 @@ if __name__ == "__main__":
     """)
 
     # Start driver
-    options = webdriver.ChromeOptions()
-    # options.headless = True
+    options = uc.ChromeOptions()
+    if not TEST_MODE:
+        options.headless = True
     options.add_argument('window-size=1920x1080')
-    driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
-    if True:
+    with uc.Chrome(options=options) as driver:
         # Go to companies page.
         logger.info("Going to companies page.")
         COMPANIES_HOMEPAGE = "https://www.indeed.com/companies"
@@ -158,7 +160,7 @@ if __name__ == "__main__":
         logger.info("Getting first six industry category links.")
         industryCategoryLinks = {}
         # Select with: a[data-tn-element="cmp-Industry-link"]
-        categoriesGroup1 = driver.find_elements_by_css_selector(css_selector='a[data-tn-element="cmp-Industry-link"]')
+        categoriesGroup1 = driver.find_elements(by=By.CSS_SELECTOR, value='a[data-tn-element="cmp-Industry-link"]')
         for el in categoriesGroup1:
             categoryName = el.get_attribute("text")
             categoryLink = el.get_attribute("href")
