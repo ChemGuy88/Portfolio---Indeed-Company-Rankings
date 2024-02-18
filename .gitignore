@@ -4,8 +4,11 @@
 **/.DS_Store
 **/*.bat
 **/*.csv
+**/*.out
 **/*.pdf
+**/*.png
 **/*.tsv
+**/*.txt
 **/*.xlsx
 **/*.zip
 data/*

@@ -4,7 +4,7 @@ Scrape job board for company rankings, and number of reviews.
 
 import json
 import logging
-import os
+import subprocess
 from pathlib import Path
 from random import randint
 from time import sleep
@@ -18,7 +18,6 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as ExpeC
 from selenium.webdriver.support.wait import WebDriverWait
-from webdriver_manager.chrome import ChromeDriverManager
 # Local packages
 from drapi.code.drapi.drapi import (getTimestamp,
                                     makeDirPath,
@@ -142,6 +141,9 @@ if __name__ == "__main__":
 
     `LOG_LEVEL` = "{LOG_LEVEL}"
     """)
+
+    # IP Monitoring
+    logger.info(f"""Getting project IP addresses:\n{subprocess.getstatusoutput("getIP")}.""")
 
     # Start driver
     options = webdriver.ChromeOptions()
