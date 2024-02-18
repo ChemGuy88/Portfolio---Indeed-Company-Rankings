@@ -145,9 +145,9 @@ if __name__ == "__main__":
 
     # Start driver
     options = webdriver.ChromeOptions()
-    # options.headless = True
+    options.add_argument("--headless=new")
     options.add_argument('window-size=1920x1080')
-    driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+    driver = webdriver.Chrome(options=options)
     if True:
         # Go to companies page.
         logger.info("Going to companies page.")
@@ -158,7 +158,7 @@ if __name__ == "__main__":
         logger.info("Getting first six industry category links.")
         industryCategoryLinks = {}
         # Select with: a[data-tn-element="cmp-Industry-link"]
-        categoriesGroup1 = driver.find_elements_by_css_selector(css_selector='a[data-tn-element="cmp-Industry-link"]')
+        categoriesGroup1 = driver.find_elements(by=By.CSS_SELECTOR, value='a[data-tn-element="cmp-Industry-link"]')
         for el in categoriesGroup1:
             categoryName = el.get_attribute("text")
             categoryLink = el.get_attribute("href")
@@ -168,19 +168,19 @@ if __name__ == "__main__":
         # See all the other industry categories.
         logger.info("See all industries.")
         SELECTOR_CSS_ALL_INDUSTRY_CATEGORIES = '[data-tn-element="cmp-Industry-see-all-desktop-link"]'
-        element = driver.find_element_by_css_selector(css_selector=SELECTOR_CSS_ALL_INDUSTRY_CATEGORIES)
+        element = driver.find_element(by=By.CSS_SELECTOR, value=SELECTOR_CSS_ALL_INDUSTRY_CATEGORIES)
         try:
             element.click()
         except ElementClickInterceptedException as err:
             message, *_ = err.args
             if "CookiePrivacyNoticeBanner" in message:
-                element = driver.find_element_by_css_selector(css_selector=SELECTOR_CSS_ALL_INDUSTRY_CATEGORIES)
+                element = driver.find_element(by=By.CSS_SELECTOR, value=SELECTOR_CSS_ALL_INDUSTRY_CATEGORIES)
                 driver.execute_script("arguments[0].click();", element)  # h/t to https://stackoverflow.com/a/48667924/5478086
             else:
                 raise err
         logger.info("See all industries - done.")
         logger.info("Scraping all other industry category links.")
-        categoriesGroup2 = driver.find_elements_by_css_selector(css_selector='a[data-tn-element="cmp-Industry-link"]')
+        categoriesGroup2 = driver.find_elements(by=By.CSS_SELECTOR, value='a[data-tn-element="cmp-Industry-link"]')
         for el in categoriesGroup2:
             categoryName = el.get_attribute("text")
             categoryLink = el.get_attribute("href")
@@ -208,13 +208,13 @@ if __name__ == "__main__":
                 pageNum += 1
                 logger.info(f"""    Working on page {pageNum:,}.""")
                 categoryCompaniesTemp = {}
-                elListCompanyBox = driver.find_elements_by_css_selector(css_selector='div[class="css-srfrud e1gufzzf0"]')
+                elListCompanyBox = driver.find_elements(by=By.CSS_SELECTOR, value='div[class="css-srfrud e1gufzzf0"]')
                 for el in elListCompanyBox:
                     companyNum += 1
-                    elCompanyName = el.find_element_by_css_selector(css_selector='a[data-tn-element="company-name"]')
-                    elCompanyLink = el.find_element_by_css_selector(css_selector='a[data-tn-element="company-name"]')
-                    elStarRating = el.find_element_by_css_selector(css_selector='span[class="css-1qqp5xo e1wnkr790"]')
-                    elNumReviews = el.find_element_by_css_selector(css_selector='a[class="css-1kxybv0 e19afand0"]')
+                    elCompanyName = el.find_element(by=By.CSS_SELECTOR, value='a[data-tn-element="company-name"]')
+                    elCompanyLink = el.find_element(by=By.CSS_SELECTOR, value='a[data-tn-element="company-name"]')
+                    elStarRating = el.find_element(by=By.CSS_SELECTOR, value='span[class="css-1qqp5xo e1wnkr790"]')
+                    elNumReviews = el.find_element(by=By.CSS_SELECTOR, value='a[class="css-1kxybv0 e19afand0"]')
                     companyName = elCompanyName.text
                     companyLink = elCompanyLink.get_attribute('href')
                     starRating = elStarRating.text
