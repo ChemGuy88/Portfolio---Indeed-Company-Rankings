@@ -143,7 +143,8 @@ if __name__ == "__main__":
     """)
 
     # IP Monitoring
-    logger.info(f"""Getting project IP addresses:\n{subprocess.getstatusoutput("getIP")}.""")
+    exitCode, output = subprocess.getstatusoutput("getIP")
+    logger.info(f"""Getting project IP addresses:\n{output}.""")
 
     # Start driver
     options = webdriver.ChromeOptions()
