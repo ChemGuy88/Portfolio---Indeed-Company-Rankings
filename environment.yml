@@ -1,0 +1,30 @@
+name: scr-env-sel-only
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pyyaml
+  - ipython
+  - bs4
+  - jinja2
+  - ca-certificates
+  - pymssql
+  - autopep8
+  - flake8
+  - console_shortcut
+  - numpy
+  - python=3.11
+  - xlwings
+  - sqlite
+  - matplotlib
+  - sqlalchemy
+  - selenium
+  - xlrd
+  - pandas
+  - pyodbc
+  - pyarrow
+  - openpyxl
+  - certifi
+  - requests
+  - colorama
+prefix: /Users/herman/opt/anaconda3/envs/scr-env-sel-only
